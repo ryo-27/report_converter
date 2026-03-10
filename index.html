@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>罫線ノートジェネレーター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* --- 印刷およびプレビュー用の詳細設定 --- */
+
+        /* 印刷時のページ設定 */
+        @page {
+            size: A4;
+            margin: 15mm; /* A4用紙のデフォルト余白を15mmに設定 */
+        }
+
+        @media print {
+            body {
+                background-color: white;
+            }
+            .no-print {
+                display: none !important;
+            }
+            #preview-view {
+                background-color: transparent !important;
+                padding: 0 !important;
+            }
+            /* プレビューエリアのシャドウや枠線を印刷時は消す */
+            #print-area {
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            /* 印刷時の背景色とグラフィックを強制的に出力させる */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        /* 罫線ノートと切り取り線をセットで包むラッパー */
+        .notebook-wrapper {
+            /* このブロックの途中で改ページさせない（はみ出る場合は次ページの頭へ） */
+            page-break-inside: avoid;
+            break-inside: avoid;
+            
+            margin-bottom: 2cm; /* ノート群の間の余白 */
+            position: relative;
+        }
+
+        .notebook-wrapper:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 罫線ノートのスタイル */
+        .notebook-paper {
+            /* 【寸法確認】全体幅を15.5cmに固定 */
+            width: 15.5cm; 
+            min-height: 4.5cm; 
+            
+            /* 【寸法確認】行の高さを0.75cmに固定 */
+            line-height: 0.75cm; 
+            font-size: 14px; 
+            font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Meiryo', sans-serif;
+            color: #333;
+            
+            /* * 【余白の調整】
+             * 上下の余白をなくし、左右に 0.2cm の余白
+             */
+            padding: 0 0.2cm; 
+            margin: 0 auto;
+            
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            box-sizing: border-box;
+            
+            /* 罫線の描画 */
+            background-image: linear-gradient(
+                to bottom,
+                transparent 0,
+                transparent calc(0.75cm - 0.5pt), 
+                #94a3b8 calc(0.75cm - 0.5pt),
+                #94a3b8 0.75cm
+            );
+            /* 【寸法確認】背景のリピートサイズ（罫線の間隔）を0.75cmに固定 */
+            background-size: 100% 0.75cm; 
+            background-repeat: repeat-y;
+
+            /* 背景の描画開始位置を左上に設定 */
+            background-position: top left; 
+            
+            /* ノートの外枠 */
+            border: 1px solid #94a3b8;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+
+        /* 切り取り線のスタイル */
+        .cut-line {
+            width: 15.5cm;
+            margin: 0 auto;
+            position: absolute;
+            bottom: -1cm; 
+            left: 50%;
+            transform: translateX(-50%);
+            border-bottom: 1px dashed #cbd5e1;
+        }
+        
+        .cut-line::after {
+            content: "✂";
+            position: absolute;
+            left: -24px;
+            top: -14px;
+            font-size: 18px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <!-- 入力画面 -->
+    <div id="input-view" class="max-w-3xl mx-auto py-10 px-4">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-700 mb-2">罫線ノートジェネレーター</h1>
+            <p class="text-gray-500">入力したテキストを、A4印刷用の罫線ノート風レイアウトに変換します。</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <p class="mb-4 text-sm text-gray-600">テキストを入力してください（改行も反映されます）。空欄のまま変換した場合は無視されます。</p>
+            
+            <div id="textareas-container" class="space-y-6">
+                <!-- Javascriptで生成 -->
+            </div>
+
+            <div class="mt-8 text-center">
+                <button onclick="convertToNotebook()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-200 flex items-center justify-center w-full md:w-auto mx-auto">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    ノート風に変換してプレビュー
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- プレビュー＆印刷画面 -->
+    <div id="preview-view" class="hidden bg-gray-200 min-h-screen py-10">
+        
+        <div class="max-w-4xl mx-auto mb-8 px-4 no-print flex flex-col sm:flex-row justify-between items-center gap-4">
+            <button onclick="goBack()" class="bg-white hover:bg-gray-50 text-gray-700 font-semibold py-2 px-6 border border-gray-300 rounded shadow-sm transition duration-200">
+                ← 編集に戻る
+            </button>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm flex-1 mx-0 sm:mx-4">
+                <h3 class="font-bold text-yellow-800 text-sm">🖨️ 印刷時の注意点</h3>
+                <ul class="text-xs text-yellow-700 mt-1 list-disc list-inside">
+                    <li>ブラウザの印刷設定で<strong>「背景のグラフィックを印刷する」</strong>にチェックを入れてください。</li>
+                    <li>用紙サイズは<strong>A4</strong>、余白は<strong>「既定」</strong>に設定してください。</li>
+                </ul>
+            </div>
+
+            <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow-lg transition duration-200 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                印刷する
+            </button>
+        </div>
+
+        <div id="print-area" class="max-w-4xl mx-auto bg-white shadow-2xl p-8 no-print:rounded-lg">
+            <div id="notebook-container">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const NUM_INPUTS = 5;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('textareas-container');
+            for (let i = 1; i <= NUM_INPUTS; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = `
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="input-${i}">
+                        テキストブロック ${i}
+                    </label>
+                    <textarea id="input-${i}" rows="4" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ここにテキストを入力..."></textarea>
+                `;
+                container.appendChild(wrapper);
+            }
+        });
+
+        function convertToNotebook() {
+            const container = document.getElementById('notebook-container');
+            container.innerHTML = ''; 
+            
+            const validTexts = [];
+
+            for (let i = 1; i <= NUM_INPUTS; i++) {
+                const text = document.getElementById(`input-${i}`).value.trim();
+                if (text) {
+                    validTexts.push(text);
+                }
+            }
+
+            if (validTexts.length === 0) {
+                alert('少なくとも1つのテキストブロックを入力してください。');
+                return;
+            }
+
+            validTexts.forEach((text, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'notebook-wrapper';
+
+                const notebook = document.createElement('div');
+                notebook.className = 'notebook-paper';
+                
+                notebook.textContent = text; 
+                wrapper.appendChild(notebook);
+
+                if (index < validTexts.length - 1) {
+                    const cutLine = document.createElement('div');
+                    cutLine.className = 'cut-line';
+                    wrapper.appendChild(cutLine);
+                }
+
+                container.appendChild(wrapper);
+            });
+
+            document.getElementById('input-view').classList.add('hidden');
+            document.getElementById('preview-view').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function goBack() {
+            document.getElementById('preview-view').classList.add('hidden');
+            document.getElementById('input-view').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
