@@ -17,6 +17,11 @@
         @media print {
             html, body {
                 background-color: white !important;
+                /* 余計な白紙ページを防ぐため、高さと余白をリセット */
+                min-height: auto !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .no-print {
                 display: none !important;
@@ -24,12 +29,16 @@
             #preview-view {
                 background-color: white !important;
                 padding: 0 !important;
+                /* プレビューコンテナの高さもリセット */
+                min-height: auto !important;
+                height: auto !important;
             }
             /* プレビューエリアのシャドウや枠線を印刷時は消す */
             #print-area {
                 background-color: white !important;
                 box-shadow: none !important;
                 padding: 0 !important;
+                margin: 0 !important;
             }
             /* 印刷時の罫線グラフィックを強制的に出力させる（ノート部分のみに限定） */
             .notebook-paper {
