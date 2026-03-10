@@ -83,13 +83,16 @@
             word-wrap: break-word;
             box-sizing: border-box;
             
-            /* 罫線の描画 */
+            /* * 【修正部分】罫線の太さのばらつきを防止
+             * サブピクセルの丸め誤差を避けるため、下(bottom)から上(top)に向かって
+             * 絶対値(0.5pt)で線を描画するシンプルな方式に変更。
+             */
             background-image: linear-gradient(
-                to bottom,
-                transparent 0,
-                transparent calc(0.75cm - 0.5pt), 
-                #94a3b8 calc(0.75cm - 0.5pt),
-                #94a3b8 0.75cm
+                to top,
+                #94a3b8 0,
+                #94a3b8 0.5pt, /* 線の太さ */
+                transparent 0.5pt,
+                transparent 100%
             );
             /* 【寸法確認】背景のリピートサイズ（罫線の間隔）を0.75cmに固定 */
             background-size: 100% 0.75cm; 
