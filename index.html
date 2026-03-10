@@ -15,23 +15,24 @@
         }
 
         @media print {
-            body {
-                background-color: white;
+            html, body {
+                background-color: white !important;
             }
             .no-print {
                 display: none !important;
             }
             #preview-view {
-                background-color: transparent !important;
+                background-color: white !important;
                 padding: 0 !important;
             }
             /* プレビューエリアのシャドウや枠線を印刷時は消す */
             #print-area {
+                background-color: white !important;
                 box-shadow: none !important;
                 padding: 0 !important;
             }
-            /* 印刷時の背景色とグラフィックを強制的に出力させる */
-            * {
+            /* 印刷時の罫線グラフィックを強制的に出力させる（ノート部分のみに限定） */
+            .notebook-paper {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -55,7 +56,7 @@
         .notebook-paper {
             /* 【寸法確認】全体幅を15.5cmに固定 */
             width: 15.5cm; 
-            min-height: 4.5cm; 
+            /* min-heightの指定を削除し、テキスト量に応じて柔軟に高さを変える */
             
             /* 【寸法確認】行の高さを0.75cmに固定 */
             line-height: 0.75cm; 
